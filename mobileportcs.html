@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>STAND STRIKE 2 – MAP & COLLISION UPDATE</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #111;
+            color: white;
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            user-select: none;
+            /* Отключение системных жестов на мобильных */
+            touch-action: none; 
+        }
+        #game-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+        .panel {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 20;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        #main-menu {
+            background: transparent;
+            justify-content: center;
+            align-items: flex-start;
+            padding-left: 100px;
+        }
+        .menu-title {
+            font-size: 60px;
+            color: #ff9900;
+            font-weight: 900;
+            font-style: italic;
+            text-shadow: 4px 4px 0 #000;
+            margin-bottom: 30px;
+        }
+        .btn {
+            background: rgba(255, 153, 0, 0.8);
+            color: white;
+            border: 2px solid #ff9900;
+            padding: 15px 40px;
+            margin: 10px;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            transform: skewX(-10deg);
+            transition: 0.2s;
+            backdrop-filter: blur(5px);
+        }
+        .btn:hover {
+            background: #ff9900;
+            transform: skewX(-10deg) scale(1.05);
+        }
+        .btn.close {
+            background: rgba(204, 0, 0, 0.8);
+            border-color: #ff3333;
+        }
+        .dialog {
+            background: rgba(34, 34, 34, 0.95);
+            border: 2px solid #ff9900;
+            padding: 30px;
+            min-width: 500px;
+            text-align: center;
+            max-height: 80vh;
+            overflow-y: auto;
+            backdrop-filter: blur(10px);
+        }
+        #roulette-window {
+            width: 100%;
+            height: 120px;
+            background: #111;
+            overflow: hidden;
+            position: relative;
+            border: 3px solid #555;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        #roulette-strip {
+            display: flex;
+            height: 100%;
+            transition: transform 4s cubic-bezier(0.1, 0.8, 0.1, 1);
+            will-change: transform;
+        }
+        .skin-item {
+            min-width: 150px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            text-align: center;
+            border-right: 2px solid #222;
+            box-sizing: border-box;
+            background: #222;
+            flex-shrink: 0;
+        }
+        .skin-name {
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        #pointer {
+            position: absolute;
+            left: 50%;
+            top: 0;
+            width: 4px;
+            height: 100%;
+            background: lime;
+            transform: translateX(-50%);
+            z-index: 5;
+            box-shadow: 0 0 10px lime;
+        }
+        #hud {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: none;
+        }
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 6px;
+            height: 6px;
+            background: lime;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+        }
+        #sniper-scope {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, transparent 30%, black 70%);
+            z-index: 15;
+        }
+        .scope-line-h {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: rgba(0, 255, 0, 0.5);
+        }
+        .scope-line-v {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 2px;
+            height: 100%;
+            background: rgba(0, 255, 0, 0.5);
+        }
+        #weapon-info {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            font-size: 30px;
+            font-weight: bold;
+            color: #ff9900;
+            text-shadow: 2px 2px 0 #000;
+            text-align: right;
+        }
+        #skin-name-ui {
+            font-size: 18px;
+            color: #ccc;
+        }
+        #top-bar {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+            font-size: 24px;
+            font-weight: bold;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 30px;
+            border: 2px solid #555;
+        }
+        #action-bar-container {
+            display: none;
+            position: absolute;
+            top: 60%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 300px;
+            height: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #fff;
+            z-index: 6;
+        }
+        #action-bar {
+            width: 0%;
+            height: 100%;
+            background: #ff9900;
+        }
+        #action-text {
+            position: absolute;
+            width: 100%;
+            text-align: center;
+            top: -25px;
+            font-weight: bold;
+            font-size: 18px;
+            color: white;
+        }
+        #killfeed {
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            align-items: flex-end;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .kill-item {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 5px 10px;
+            border-radius: 3px;
+            animation: fadeOut 4s forwards;
+        }
+        #buy-menu {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 30;
+            pointer-events: auto;
+        }
+        .wheel-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 400px;
+            height: 400px;
+            border-radius: 50%;
+            border: 2px solid #ff9900;
+            background: rgba(255, 153, 0, 0.05);
+        }
+        .wheel-btn {
+            position: absolute;
+            width: 100px;
+            height: 60px;
+            background: #333;
+            color: white;
+            border: 2px solid #ff9900;
+            border-radius: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            transition: 0.2s;
+        }
+        .wheel-btn:hover {
+            background: #ff9900;
+            color: black;
+            transform: scale(1.1);
+        }
+        #w1 { top: -30px; left: 150px; }
+        #w2 { top: 80px; right: -30px; }
+        #w3 { bottom: 20px; right: 20px; }
+        #w4 { bottom: 20px; left: 20px; }
+        #w5 { top: 80px; left: -30px; }
+        #scoreboard {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 600px;
+            background: rgba(0, 0, 0, 0.9);
+            border: 2px solid #ff9900;
+            padding: 20px;
+            z-index: 25;
+            pointer-events: none;
+        }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th, td { border-bottom: 1px solid #444; padding: 8px; }
+        th { color: #ff9900; }
+        .row-me { font-weight: bold; background: rgba(255, 153, 0, 0.2); }
+        #banner {
+            display: none;
+            position: absolute;
+            top: 20%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 50px;
+            font-weight: 900;
+            text-shadow: 3px 3px 0 #000;
+            z-index: 30;
+            text-align: center;
+        }
+        @keyframes fadeOut { 0% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }
+        #inspect-hint {
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            font-size: 18px;
+            color: #888;
+        }
+        #hp-bar {
+            position: absolute;
+            top: 80px;
+            left: 20px;
+            font-size: 20px;
+            font-weight: bold;
+            color: #ff4444;
+            text-shadow: 2px 2px 0 #000;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+    <div id="game-canvas"></div>
+
+    <div id="main-menu" class="panel" style="display: flex;">
+        <div class="menu-title">STAND STRIKE 2</div>
+        <button class="btn" onclick="openPanel('team-panel')">ИГРАТЬ</button>
+        <button class="btn" onclick="openPanel('inventory-panel')">ИНВЕНТАРЬ</button>
+        <button class="btn" onclick="openPanel('cases-panel')">КЕЙСЫ</button>
+        <button class="btn" onclick="openPanel('settings-panel')">НАСТРОЙКИ</button>
+    </div>
+
+    <div id="team-panel" class="panel">
+        <div class="dialog">
+            <h2>Выбор стороны</h2>
+            <button class="btn" style="background:#cc0000;" onclick="startGame('T')">Террористы</button>
+            <button class="btn" style="background:#0000cc;" onclick="startGame('CT')">Спецназ</button>
+        </div>
+    </div>
+
+    <div id="cases-panel" class="panel">
+        <div class="dialog" style="min-width: 800px;" id="case-dialog">
+            <h2>Открытие Кейсов</h2>
+            <div id="roulette-window">
+                <div id="pointer"></div>
+                <div id="roulette-strip"></div>
+            </div>
+            <button class="btn" onclick="openCase()" id="spin-btn">Открыть (100$)</button>
+            <button class="btn close" onclick="openPanel('main-menu')">Назад</button>
+            <h3 id="case-result" style="margin-top:10px; height: 20px;"></h3>
+        </div>
+    </div>
+
+    <div id="inventory-panel" class="panel">
+        <div class="dialog">
+            <h2>Инвентарь</h2>
+            <div id="inv-list" style="display:flex; flex-direction:column; gap:10px; max-height:300px; overflow-y:auto;"></div>
+            <button class="btn close" onclick="openPanel('main-menu')">Назад</button>
+        </div>
+    </div>
+
+    <div id="settings-panel" class="panel">
+        <div class="dialog">
+            <h2>Настройки</h2>
+            <label>Чувствительность мыши: <input type="range" id="sens" min="1" max="100" value="20"></label>
+            <br><br>
+            <button class="btn close" onclick="closeSettings()">Назад</button>
+            <button class="btn close" onclick="location.reload()" style="background:#880000;">Выйти из игры</button>
+        </div>
+    </div>
+
+    <div id="hud">
+        <div id="crosshair"></div>
+        <div id="top-bar">
+            <div id="score-ct" style="color: #4444ff;">CT: 0</div>
+            <div id="round-timer" style="color: white;">02:00</div>
+            <div id="score-t" style="color: #ff4444;">T: 0</div>
+        </div>
+        <div id="killfeed"></div>
+        <div id="action-bar-container"><div id="action-text">Установка...</div><div id="action-bar"></div></div>
+        <div id="hp-bar">❤️ 100</div>
+        <div id="weapon-info">
+            <span id="w-name">Автомат</span><br>
+            <span id="skin-name-ui">Стандартный</span>
+        </div>
+        <div id="inspect-hint">[F] Осмотреть | [B] Закупка | [Ctrl] Присесть</div>
+    </div>
+
+    <div id="buy-menu">
+        <div class="wheel-container">
+            <div class="wheel-btn" id="w1" onclick="selectWeapon(1)">1. Автомат</div>
+            <div class="wheel-btn" id="w2" onclick="selectWeapon(2)">2. Пистолет</div>
+            <div class="wheel-btn" id="w3" onclick="selectWeapon(3)">3. Нож</div>
+            <div class="wheel-btn" id="w4" onclick="selectWeapon(4)">4. Снайперка</div>
+            <div class="wheel-btn" id="w5" onclick="selectWeapon(5)">5. C4 (Бомба)</div>
+        </div>
+    </div>
+
+    <div id="sniper-scope"><div class="scope-line-h"></div><div class="scope-line-v"></div></div>
+    <div id="scoreboard">
+        <h2>Счет (Tab)</h2>
+        <table><thead><tr><th>Игрок</th><th>Команда</th><th>K</th><th>D</th></tr></thead><tbody id="sb-body"></tbody></table>
+    </div>
+    <div id="banner"></div>
+
+<script>
+    // ================== ДАННЫЕ ==================
+    const WEAPONS = { 1: "Автомат", 2: "Пистолет", 3: "Нож", 4: "Снайперка", 5: "Бомба (C4)" };
+    const SKINS = [
+        { w: 1, name: "AK-47 | Asiimov", color: 0xffffff, hex: "#ffffff" },
+        { w: 1, name: "AK-47 | Redline", color: 0xcc0000, hex: "#cc0000" },
+        { w: 1, name: "M4A4 | Howl", color: 0xff4444, hex: "#ff4444" },
+        { w: 2, name: "Glock | Fade", color: 0xff00ff, hex: "#ff00ff" },
+        { w: 2, name: "Desert Eagle | Blaze", color: 0xff8800, hex: "#ff8800" },
+        { w: 2, name: "USP-S | Kill Confirmed", color: 0xcccccc, hex: "#cccccc" },
+        { w: 4, name: "AWP | Dragon Lore", color: 0xffd700, hex: "#ffd700" },
+        { w: 4, name: "AWP | Medusa", color: 0x44aaff, hex: "#44aaff" },
+        { w: 4, name: "SSG 08 | Blood in the Water", color: 0xff5555, hex: "#ff5555" },
+        { w: 3, name: "Керамбит | Градиент", color: 0x8800ff, hex: "#8800ff" },
+        { w: 3, name: "M9 Bayonet | Crimson", color: 0xff2222, hex: "#ff2222" },
+        { w: 3, name: "Huntsman | Forest", color: 0x228b22, hex: "#228b22" },
+        { w: 3, name: "Butterfly Knife | Slaughter", color: 0xff6666, hex: "#ff6666" },
+        { w: 1, name: "AK-47 | Fire Serpent", color: 0x44aa44, hex: "#44aa44" },
+        { w: 2, name: "P250 | Sand Dune", color: 0xccaa55, hex: "#ccaa55" }
+    ];
+    let inventory = [];
+    let equippedSkins = {
+        1: { name: "Стандарт", color: 0x555555 },
+        2: { name: "Стандарт", color: 0x333333 },
+        3: { name: "Стандарт", color: 0xaaaaaa },
+        4: { name: "Стандарт", color: 0x224422 }
+    };
+    let teamScores = { CT: 0, T: 0 };
+    let stats = [];
+
+    // ================== РУЛЕТКА ==================
+    let isSpinning =
