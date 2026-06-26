@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>STAND STRIKE 2 - 5v5 UPDATE</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #111; color: white; font-family: 'Segoe UI', Tahoma, sans-serif; user-select: none; touch-action: none;}
+        #game-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+        
+        /* CLASSIC MAIN MENU */
+        #main-menu { position: absolute; top:0; left:0; width: 100%; height: 100%; background: linear-gradient(135deg, rgba(20,20,20,0.95), rgba(50,50,50,0.95)); z-index: 50; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .menu-box { background: rgba(0,0,0,0.8); border: 2px solid #ff9900; padding: 40px; border-radius: 10px; text-align: center; box-shadow: 0 0 20px rgba(255,153,0,0.2); }
+        .menu-title { font-size: max(40px, 4vw); color: #ff9900; font-weight: 900; font-style: italic; text-shadow: 3px 3px 0 #000; margin-bottom: 30px; letter-spacing: 2px;}
+        .team-select { display: flex; gap: 20px; justify-content: center; margin-bottom: 20px; }
+        .btn { background: rgba(30, 30, 30, 0.8); color: white; border: 2px solid #ff9900; padding: 15px 40px; font-size: 20px; font-weight: bold; cursor: pointer; text-transform: uppercase; transition: 0.2s; border-radius: 5px; }
+        .btn:hover { background: #ff9900; color: black; transform: scale(1.05); }
+        .btn-ct { border-color: #4444ff; } .btn-ct:hover { background: #4444ff; }
+        .btn-t { border-color: #ff4444; } .btn-t:hover { background: #ff4444; }
+        .settings-row { margin-top: 20px; font-size: 16px; color: #ccc; }
+        
+        #hud { display: none; position: absolute; top:0; left:0; width: 100%; height: 100%; z-index: 10; pointer-events: none; }
+        #crosshair { position: absolute; top: 50%; left: 50%; width: 6px; height: 6px; background: lime; transform: translate(-50%, -50%); border-radius: 50%; }
+        #sniper-scope { display: none; position: absolute; top:0; left:0; width: 100%; height: 100%; background: radial-gradient(circle, transparent 30%, black 70%); z-index: 15; }
+        .scope-line-h { position: absolute; top: 50%; left: 0; width: 100%; height: 2px; background: rgba(0,255,0,0.5); }
+        .scope-line-v { position: absolute; top: 0; left: 50%; width: 2px; height: 100%; background: rgba(0,255,0,0.5); }
+
+        #bottom-ui { position: absolute; bottom: 30px; left: 30px; right: 30px; display: flex; justify-content: space-between; align-items: flex-end; }
+        #hp-display { font-size: 40px; font-weight: 900; color: #ff4444; text-shadow: 2px 2px 0 #000; background: rgba(0,0,0,0.5); padding: 10px 20px; border-radius: 8px; border-left: 5px solid #ff4444; }
+        #weapon-info { font-size: 35px; font-weight: bold; color: #ff9900; text-shadow: 2px 2px 0 #000; background: rgba(0,0,0,0.5); padding: 10px 20px; border-radius: 8px; border-right: 5px solid #ff9900;}
+        
+        #top-bar { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 20px; font-size: 24px; font-weight: bold; background: rgba(0,0,0,0.7); padding: 10px 30px; border: 2px solid #555; border-radius: 5px;}
+        #killfeed { position: absolute; top: 10px; right: 20px; display: flex; flex-direction: column; gap: 5px; align-items: flex-end; font-size: 14px; font-weight: bold;}
+        .kill-item { background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 3px; animation: fadeOut 4s forwards; }
+
+        /* Weapon Wheel */
+        #buy-menu { display: none; position: absolute; top:0; left:0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 40; pointer-events: auto; }
+        .wheel-container { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 300px; height: 300px; border-radius: 50%; border: 2px solid #ff9900; background: rgba(255,153,0,0.1); }
+        .wheel-btn { position: absolute; width: 90px; height: 50px; background: #222; color: white; border: 2px solid #ff9900; border-radius: 10px; font-size: 14px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s;}
+        .wheel-btn:active, .wheel-btn:hover { background: #ff9900; color: black; transform: scale(1.1); }
+        #w1 { top: -25px; left: 105px; } #w2 { top: 60px; right: -35px; } #w3 { bottom: 15px; right: 15px; } #w4 { bottom: 15px; left: 15px; }
+        #close-buy { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 10px 20px; background: #cc0000; border: none; color: white; border-radius: 5px; cursor: pointer; font-weight: bold;}
+
+        #scoreboard { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 80%; max-width: 600px; background: rgba(0,0,0,0.9); border: 2px solid #ff9900; padding: 20px; z-index: 35; pointer-events: none; border-radius: 10px;}
+        table { width: 100%; border-collapse: collapse; text-align: left; } th, td { border-bottom: 1px solid #444; padding: 10px; } th { color: #ff9900; }
+        .row-me { font-weight: bold; background: rgba(255,153,0,0.2); }
+
+        #banner { display: none; position: absolute; top: 20%; left: 50%; transform: translateX(-50%); font-size: 50px; font-weight: 900; text-shadow: 4px 4px 0 #000; z-index: 30; text-align: center;}
+        @keyframes fadeOut { 0% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }
+        
+        #inspect-hint { position: absolute; bottom: 90px; right: 30px; font-size: 16px; color: #aaa; text-align: right;}
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+    <div id="game-canvas"></div>
+
+    <!-- КЛАССИЧЕСКОЕ МЕНЮ ИЗ ПРОШЛОЙ ВЕРСИИ -->
+    <div id="main-menu">
+        <div class="menu-box">
+            <div class="menu-title">STAND STRIKE 2</div>
+            <div style="margin-bottom: 15px; color: #ccc;">Выберите сторону для игры 5 на 5:</div>
+            <div class="team-select">
+                <button class="btn btn-t" onclick="startGame('T')">ТЕРРОРИСТЫ</button>
+                <button class="btn btn-ct" onclick="startGame('CT')">СПЕЦНАЗ</button>
+            </div>
+            <div class="settings-row">
+                <label>Чувствительность мыши: <input type="range" id="sens" min="1" max="100" value="25"></label>
+            </div>
+        </div>
+    </div>
+
+    <div id="hud">
+        <div id="crosshair"></div>
+        <div id="top-bar">
+            <div id="score-ct" style="color: #4444ff;">CT: 0</div>
+            <div id="round-timer" style="color: white;">02:00</div>
+            <div id="score-t" style="color: #ff4444;">T: 0</div>
+        </div>
+        <div id="killfeed"></div>
+        
+        <div id="inspect-hint" class="pc-only">[ЛКМ] Огонь | [ПКМ] Прицел<br>[C] Присесть | [B] Магазин<br>[TAB] Статистика</div>
+        
+        <div id="bottom-ui">
+            <div id="hp-display">❤️ 100</div>
+            <div id="weapon-info"><span id="w-name">Автомат</span></div>
+        </div>
+    </div>
+
+    <div id="buy-menu">
+        <div class="wheel-container">
+            <div class="wheel-btn" id="w1" onclick="selectWeapon(1)">АК-47</div>
+            <div class="wheel-btn" id="w2" onclick="selectWeapon(2)">Glock</div>
+            <div class="wheel-btn" id="w3" onclick="selectWeapon(3)">Нож (СКОРОСТЬ)</div>
+            <div class="wheel-btn" id="w4" onclick="selectWeapon(4)">AWP</div>
+            <button id="close-buy" onclick="document.getElementById('buy-menu').style.display='none'">ЗАКРЫТЬ</button>
+        </div>
+    </div>
+
+    <div id="sniper-scope"><div class="scope-line-h"></div><div class="scope-line-v"></div></div>
+    <div id="scoreboard"><table><thead><tr><th>Игрок</th><th>K</th><th>D</th></tr></thead><tbody id="sb-body"></tbody></table></div>
+    <div id="banner"></div>
+
+<script>
+    const WEAPONS = { 1: "АК-47", 2: "Glock", 3: "Нож", 4: "AWP" };
+    let teamScores = { CT: 0, T: 0 }, stats = [];
+    const isMobile = ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+
+    let scene, camera, renderer, clock = new THREE.Clock();
+    let bots = [], hitboxes = [], colliders = []; 
+    let move = { f:false, b:false, l:false, r:false };
+    let velocity = new THREE.Vector3(), direction = new THREE.Vector3();
+    let gameState = 'MENU', playerTeam = 'CT';
+    let weapon = 1, isScoped = false, isCrouching = false;
+    let viewmodelGroup = new THREE.Group(), muzzleFlash;
+    
+    // ХП ИГРОКА
+    let playerHP = 100;
+
+    const texLoader = new THREE.TextureLoader();
+    const memeTex = texLoader.load('image_d932ff.png'); 
+    memeTex.wrapS = THREE.RepeatWrapping; memeTex.wrapT = THREE.RepeatWrapping;
+
+    let roundTimer = 120;
+    let isFiring = false;
+    let nextFireTime = 0;
+
+    function init3D() {
+        scene = new THREE.Scene(); scene.background = new THREE.Color(0x1a1a1a); scene.fog = new THREE.Fog(0x1a1a1a, 100, 2000);
+        camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 3000);
+        camera.add(viewmodelGroup); scene.add(camera);
+        renderer = new THREE.WebGLRenderer({antialias: true}); renderer.setSize(window.innerWidth, window.innerHeight);
+        document.getElementById('game-canvas').appendChild(renderer.domElement);
+
+        scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 0.8));
+        scene.add(new THREE.DirectionalLight(0xffffff, 0.5));
+
+        buildMap();
+        setupViewmodel();
+
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('keydown', onKeyDown);
+        document.addEventListener('keyup', onKeyUp);
+        document.addEventListener('mousedown', (e) => { if(e.button===0) isFiring = true; onMouseDown(e); });
+        document.addEventListener('mouseup', (e) => { if(e.button===0) isFiring = false; });
+
+        animate();
+    }
+
+    function buildMap() {
+        let floor = new THREE.Mesh(new THREE.PlaneGeometry(3000, 3000), new THREE.MeshPhongMaterial({color: 0x444444}));
+        floor.rotation.x = -Math.PI / 2; scene.add(floor);
+        
+        function addWall(x, z, w, d, h=60, color=0x888888) {
+            let wall = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshPhongMaterial({color: color}));
+            wall.position.set(x, h/2, z); wall.geometry.computeBoundingBox(); wall.userData.box = new THREE.Box3().setFromObject(wall);
+            scene.add(wall); colliders.push(wall);
+        }
+        
+        // Внешние стены
+        addWall(0, -1500, 3000, 100, 200); addWall(0, 1500, 3000, 100, 200);
+        addWall(-1500, 0, 100, 3000, 200); addWall(1500, 0, 100, 3000, 200); 
+        
+        // Закрываем карту (крестообразный центр)
+        addWall(0, 0, 600, 200, 100); 
+        addWall(0, 0, 200, 600, 100);
+        
+        // Укрытия на миде
+        addWall(0, 500, 300, 50, 60);
+        addWall(0, -500, 300, 50, 60);
+
+        // ПЛЕНТЫ (расстояние между ними 800)
+        addWall(-400, 0, 200, 200, 2, 0xff3333); // Plant A (Красный)
+        addWall(400, 0, 200, 200, 2, 0x3333ff);  // Plant B (Синий)
+    }
+
+    function setupViewmodel() {
+        muzzleFlash = new THREE.Mesh(new THREE.PlaneGeometry(3,3), new THREE.MeshBasicMaterial({color: 0xffaa00, transparent: true, opacity: 0}));
+        muzzleFlash.position.set(0, 0, -6);
+        viewmodelGroup.add(muzzleFlash);
+    }
+
+    function updateViewModel() {
+        viewmodelGroup.children = [muzzleFlash];
+        let mat = new THREE.MeshPhongMaterial({color: 0x555555});
+        let mesh;
+        if(weapon === 1) mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1.5, 9), mat);
+        else if(weapon === 2) mesh = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1, 3), mat);
+        else if(weapon === 3) mesh = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.5, 4), new THREE.MeshPhongMaterial({color:0xaaaaaa}));
+        else if(weapon === 4) {
+            mesh = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.5, 14), new THREE.MeshPhongMaterial({color:0x224422}));
+            // ДОБАВИЛ ПРИЦЕЛ НА МОДЕЛЬКУ AWP
+            let scope = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 5, 16), new THREE.MeshPhongMaterial({color:0x111111}));
+            scope.rotation.x = Math.PI / 2;
+            scope.position.set(0, 1.2, -1);
+            mesh.add(scope);
+        }
+        
+        mesh.position.set(3, -2, -5);
+        if(weapon === 3) mesh.rotation.y = -Math.PI/6;
+        viewmodelGroup.add(mesh);
+        document.getElementById('w-name').innerText = WEAPONS[weapon];
+    }
+
+    function startGame(team) {
+        playerTeam = team; document.getElementById('main-menu').style.display = 'none';
+        document.getElementById('hud').style.display = 'block';
+        if (!isMobile) document.body.requestPointerLock();
+        startRound();
+    }
+
+    function startRound() {
+        gameState = 'PLAYING'; roundTimer = 120; playerHP = 100;
+        updateHPUI();
+        stats = [{ name: "Ты", team: playerTeam, kills: 0, deaths: 0 }];
+        camera.position.set(0, 20, playerTeam === 'T' ? 1200 : -1200);
+        euler.set(0, playerTeam === 'T' ? Math.PI : 0, 0); camera.quaternion.setFromEuler(euler);
+        velocity.set(0,0,0); selectWeapon(1);
+
+        bots.forEach(b => scene.remove(b)); bots = []; hitboxes = [];
+        
+        // ЛОГИКА 5 на 5 (1 игрок + 4 бота VS 5 ботов)
+        let tBotsCount = playerTeam === 'T' ? 4 : 5;
+        let ctBotsCount = playerTeam === 'CT' ? 4 : 5;
+
+        function spawnBot(team, index) {
+            let isT = team === 'T';
+            let tint = isT ? 0xff6666 : 0x6666ff;
+
+            let botGroup = new THREE.Group();
+            botGroup.position.set((Math.random()-0.5)*400, 0, isT ? 1200 + (Math.random()-0.5)*200 : -1200 + (Math.random()-0.5)*200);
+            
+            let body = new THREE.Mesh(new THREE.BoxGeometry(14, 22, 12), new THREE.MeshPhongMaterial({map: memeTex, color: tint}));
+            body.position.y = 11; body.userData = { isHead: false, root: botGroup };
+            
+            let head = new THREE.Mesh(new THREE.BoxGeometry(8, 8, 8), new THREE.MeshPhongMaterial({map: memeTex, color: tint}));
+            head.position.y = 26; head.userData = { isHead: true, root: botGroup };
+
+            let botGun = new THREE.Mesh(new THREE.BoxGeometry(2, 4, 10), new THREE.MeshPhongMaterial({color: 0x222222}));
+            botGun.position.set(8, 14, 6);
+
+            botGroup.add(body); botGroup.add(head); botGroup.add(botGun);
+            botGroup.userData = { name: `Бот ${team} #${index}`, team: team, tDir: new THREE.Vector3(), cTimer: 0, hp: 100, bodyMats: [body.material, head.material], shootTimer: 0 };
+            
+            scene.add(botGroup); bots.push(botGroup);
+            hitboxes.push(body, head);
+            stats.push({ name: botGroup.userData.name, team: team, kills: 0, deaths: 0 });
+        }
+
+        for(let i=1; i<=tBotsCount; i++) spawnBot('T', i);
+        for(let i=1; i<=ctBotsCount; i++) spawnBot('CT', i);
+
+        document.getElementById('banner').style.display = 'none'; updateScoreboard();
+    }
+
+    function updateHPUI() {
+        let hpEl = document.getElementById('hp-display');
+        hpEl.innerText = `❤️ ${Math.max(0, playerHP)}`;
+        if(playerHP < 30) hpEl.style.color = '#ff0000';
+        else hpEl.style.color = '#ff4444';
+    }
+
+    function selectWeapon(id) {
+        weapon = id; isScoped = false; camera.fov = 75; camera.updateProjectionMatrix();
+        document.getElementById('sniper-scope').style.display = 'none';
+        document.getElementById('buy-menu').style.display = 'none';
+        updateViewModel();
+        if(gameState === 'PLAYING' && !isMobile) document.body.requestPointerLock();
+    }
+
+    let euler = new THREE.Euler(0, 0, 0, 'YXZ');
+    function onMouseMove(e) {
+        if(gameState !== 'PLAYING') return;
+        if (!isMobile && document.pointerLockElement !== document.body) return;
+        let sens = document.getElementById('sens').value * 0.0001;
+        euler.setFromQuaternion(camera.quaternion);
+        euler.y -= e.movementX * sens * (isScoped ? 0.3 : 1);
+        euler.x -= e.movementY * sens * (isScoped ? 0.3 : 1);
+        euler.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, euler.x));
+        camera.quaternion.setFromEuler(euler);
+    }
+
+    function onKeyDown(e) {
+        if(gameState !== 'PLAYING') return;
+        switch(e.code) {
+            case 'KeyW': move.f = true; break; case 'KeyS': move.b = true; break;
+            case 'KeyA': move.l = true; break; case 'KeyD': move.r = true; break;
+            case 'KeyC': isCrouching = true; break;
+            case 'Space': if(camera.position.y <= (isCrouching?10:20)) velocity.y = 150; break;
+            case 'KeyB': if(!isMobile) document.exitPointerLock(); document.getElementById('buy-menu').style.display = 'block'; break;
+            case 'Tab': document.getElementById('scoreboard').style.display = 'block'; updateScoreboard(); e.preventDefault(); break;
+        }
+    }
+    function onKeyUp(e) {
+        switch(e.code) {
+            case 'KeyW': move.f = false; break; case 'KeyS': move.b = false; break;
+            case 'KeyA': move.l = false; break; case 'KeyD': move.r = false; break;
+            case 'KeyC': isCrouching = false; break;
+            case 'Tab': document.getElementById('scoreboard').style.display = 'none'; break;
+        }
+    }
+    function onMouseDown(e) {
+        if(gameState !== 'PLAYING' || isMobile) return;
+        if(document.pointerLockElement !== document.body) return;
+        if(e.button === 2 && weapon === 4) { 
+            isScoped = !isScoped; camera.fov = isScoped ? 20 : 75; camera.updateProjectionMatrix();
+            document.getElementById('sniper-scope').style.display = isScoped ? 'block' : 'none';
+        }
+    }
+
+    function checkCollision(box) {
+        for(let i=0; i<colliders.length; i++) if(box.intersectsBox(colliders[i].userData.box)) return true;
+        return false;
+    }
+
+    function doShoot() {
+        let now = Date.now();
+        if (now < nextFireTime) return;
+
+        if (weapon === 1) nextFireTime = now + 100; 
+        else if (weapon === 2) nextFireTime = now + 200; 
+        else if (weapon === 4) nextFireTime = now + 1200; 
+        else if (weapon === 3) nextFireTime = now + 400;
+
+        muzzleFlash.opacity = 1; setTimeout(()=> { muzzleFlash.opacity = 0; }, 50);
+        if(weapon !== 3) {
+            euler.setFromQuaternion(camera.quaternion);
+            euler.x += (Math.random() * 0.02); 
+            camera.quaternion.setFromEuler(euler);
+        }
+
+        let spread = weapon === 4 && !isScoped ? 0.2 : (weapon === 1 ? 0.02 : 0);
+        if (weapon === 4 && (Math.abs(velocity.x) > 10 || Math.abs(velocity.z) > 10)) spread += 0.1;
+
+        let dir = new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion);
+        if (spread > 0) {
+            dir.x += (Math.random() - 0.5) * spread; dir.y += (Math.random() - 0.5) * spread; dir.z += (Math.random() - 0.5) * spread;
+            dir.normalize();
+        }
+
+        let rc = new THREE.Raycaster(); rc.set(camera.position, dir);
+        let hits = rc.intersectObjects(hitboxes, false); 
+        if(hits.length > 0) {
+            let part = hits[0].object; let bot = part.userData.root;
+            if(bot.userData && bot.userData.team !== playerTeam) {
+                let dmg = weapon === 1 ? 26 : (weapon === 2 ? 15 : (weapon === 4 ? 110 : 100));
+                if(weapon === 3 && camera.position.distanceTo(bot.position) > 60) return;
+                
+                if (part.userData.isHead) dmg *= 4; 
+                bot.userData.hp -= dmg;
+                bot.userData.bodyMats.forEach(m => { m.color.setHex(0xffffff); }); 
+                setTimeout(() => { if(bot) bot.userData.bodyMats.forEach(m => { m.color.setHex(bot.userData.team === 'T'?0xff6666:0x6666ff); }); }, 100);
+
+                if(bot.userData.hp <= 0) {
+                    bot.userData.hp = 100;
+                    addKillfeed("Ты", bot.userData.name, playerTeam === 'T' ? '#ff4444' : '#4444ff', part.userData.isHead);
+                    stats.find(s => s.name === "Ты").kills++; stats.find(s => s.name === bot.userData.name).deaths++;
+                    bot.position.set((Math.random()-0.5)*400, 0, bot.userData.team === 'T' ? 1200 : -1200);
+                }
+            }
+        }
+    }
+
+    function addKillfeed(k, v, color, hs=false) {
+        let feed = document.getElementById('killfeed');
+        let item = document.createElement('div'); item.className = 'kill-item';
+        item.innerHTML = `<span style="color:${color}">${k}</span> ${hs?'🎯':'🔫'} <span>${v}</span>`;
+        feed.appendChild(item); setTimeout(() => { if(feed.contains(item)) feed.removeChild(item); }, 4000);
+    }
+
+    function updateScoreboard() {
+        let tbody = document.getElementById('sb-body'); tbody.innerHTML = '';
+        stats.sort((a,b) => b.kills - a.kills).forEach(s => {
+            let tr = document.createElement('tr'); tr.className = s.name === "Ты" ? "row-me" : "";
+            tr.style.color = s.team === 'T' ? '#ff8888' : '#8888ff';
+            tr.innerHTML = `<td>${s.name}</td><td>${s.kills}</td><td>${s.deaths}</td>`; tbody.appendChild(tr);
+        });
+    }
+
+    function endRound(winner) {
+        if(gameState === 'ROUND_OVER') return;
+        gameState = 'ROUND_OVER'; teamScores[winner]++;
+        document.getElementById('score-ct').innerText = `CT: ${teamScores.CT}`; document.getElementById('score-t').innerText = `T: ${teamScores.T}`;
+        let b = document.getElementById('banner'); b.style.display = 'block'; b.style.color = winner === 'T' ? '#ff4444' : '#4444ff';
+        b.innerText = `${winner === 'T' ? 'Террористы' : 'Спецназ'} победили!`;
+        setTimeout(startRound, 4000);
+    }
+
+    setInterval(() => {
+        if(gameState !== 'PLAYING') return; roundTimer--;
+        let m = Math.floor(roundTimer / 60); let s = roundTimer % 60;
+        document.getElementById('round-timer').innerText = `0${m}:${s<10?'0':''}${s}`;
+        if(roundTimer <= 0) endRound('CT');
+    }, 1000);
+
+    function animate() {
+        requestAnimationFrame(animate); let dt = Math.min(clock.getDelta(), 0.1);
+
+        if(gameState === 'PLAYING') {
+            if (isFiring) doShoot();
+
+            velocity.x -= velocity.x * 10 * dt; velocity.z -= velocity.z * 10 * dt; velocity.y -= 9.8 * 100 * dt; 
+            direction.z = Number(move.f) - Number(move.b); direction.x = Number(move.r) - Number(move.l); direction.normalize();
+
+            // СКОРОСТЬ С НОЖОМ КАК У БОТОВ (И ДАЖЕ БЫСТРЕЕ)
+            let speed = weapon === 3 ? 750 : 400; 
+            if(isCrouching) speed *= 0.5; 
+            
+            if(move.f || move.b) velocity.z -= direction.z * speed * dt;
+            if(move.l || move.r) velocity.x += direction.x * speed * dt;
+
+            let pBox = new THREE.Box3(); 
+            let prevPos = camera.position.clone();
+            camera.translateZ(velocity.z * dt); pBox.setFromCenterAndSize(camera.position, new THREE.Vector3(12, isCrouching ? 20 : 40, 12));
+            if(checkCollision(pBox)) camera.position.copy(prevPos); 
+
+            prevPos = camera.position.clone(); camera.translateX(velocity.x * dt); pBox.setFromCenterAndSize(camera.position, new THREE.Vector3(12, isCrouching ? 20 : 40, 12));
+            if(checkCollision(pBox)) camera.position.copy(prevPos);
+
+            let targetY = isCrouching ? 10 : 20; camera.position.y += velocity.y * dt;
+            if(camera.position.y <= targetY) { velocity.y = 0; camera.position.y = targetY; }
+
+            // АИ БОТОВ И СТРЕЛЬБА
+            bots.forEach(b => {
+                b.userData.cTimer -= dt;
+                let distToPlayer = b.position.distanceTo(camera.position);
+                let isEnemy = b.userData.team !== playerTeam;
+
+                // Бот видит игрока и стреляет
+                if(isEnemy && distToPlayer < 900) {
+                    b.userData.tDir.copy(camera.position.clone().sub(b.position).normalize());
+                    b.userData.cTimer = 0.5; // Чаще обновляем вектор на игрока
+                    
+                    b.userData.shootTimer -= dt;
+                    if(b.userData.shootTimer <= 0) {
+                        playerHP -= Math.floor(Math.random() * 10) + 5; // Урон 5-15
+                        updateHPUI();
+                        b.userData.shootTimer = 0.4; // Задержка между выстрелами бота
+                        if(playerHP <= 0) {
+                            addKillfeed(b.userData.name, "Тебя", b.userData.team === 'T' ? '#ff4444' : '#4444ff');
+                            endRound(b.userData.team);
+                        }
+                    }
+                } else if(b.userData.cTimer <= 0) {
+                    let target = new THREE.Vector3(Math.random() > 0.5 ? 400 : -400, 0, (Math.random()-0.5)*1000); // Бегут к плентам
+                    let dir = target.sub(b.position).normalize(); dir.x += (Math.random()-0.5); dir.z += (Math.random()-0.5);
+                    b.userData.tDir.copy(dir.normalize()); b.userData.cTimer = 2;
+                }
+
+                let bOldPos = b.position.clone(); b.position.add(b.userData.tDir.clone().multiplyScalar(200 * dt)); // Боты быстрые
+                let bBox = new THREE.Box3().setFromCenterAndSize(b.position.clone().add(new THREE.Vector3(0,15,0)), new THREE.Vector3(16, 30, 16));
+                
+                if(checkCollision(bBox)) { b.position.copy(bOldPos); b.userData.tDir.set((Math.random()-0.5)*2, 0, (Math.random()-0.5)*2).normalize(); b.userData.cTimer = 1; }
+                
+                let lookTarget = b.position.clone().add(b.userData.tDir);
+                lookTarget.y = b.position.y;
+                b.lookAt(lookTarget);
+            });
+        }
+        renderer.render(scene, camera);
+    }
+
+    window.addEventListener('resize', () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
+    init3D();
+</script>
+</body>
+</html>
